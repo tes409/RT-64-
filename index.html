@@ -1,0 +1,88 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake Malware Visualizer</title>
+    <style>
+        body {
+            background: url('https://upload.wikimedia.org/wikipedia/en/6/66/Bliss_(Windows_XP).jpg') no-repeat center center fixed;
+            background-size: cover;
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="visualizer"></canvas>
+    <script>
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        function randomBox() {
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                width: Math.random() * 100 + 20,
+                height: Math.random() * 100 + 20,
+                color: `hsl(${Math.random() * 360}, 100%, 50%)`
+            };
+        }
+
+        let boxes = [];
+
+        function drawBoxes() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            boxes.forEach(box => {
+                ctx.fillStyle = box.color;
+                ctx.fillRect(box.x, box.y, box.width, box.height);
+            });
+
+            requestAnimationFrame(drawBoxes);
+        }
+
+        setInterval(() => {
+            boxes.push(randomBox());
+        }, 10);
+
+        drawBoxes();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        function bytebeat(t) {
+            return t * (t & 16384 ? 6 : 5) * (4 - (1 & t >> 8)) >> (3 & t >> 9) | (t | t * 3) >> 5;
+        }
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const sampleRate = 8000;
+        const duration = 8; 
+        const buffer = audioCtx.createBuffer(1, sampleRate * duration, sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let t = 0; t < data.length; t++) {
+            data[t] = ((bytebeat(t) & 255) / 255) * 2 - 1;
+        }
+
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        source.connect(audioCtx.destination);
+
+        document.body.addEventListener("click", () => {
+            if (audioCtx.state === "suspended") {
+                audioCtx.resume();
+            }
+            source.start();
+        }, { once: true });
+    </script>
+</body>
+</html>
